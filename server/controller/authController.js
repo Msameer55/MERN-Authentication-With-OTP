@@ -142,7 +142,7 @@ export const sendVerifyOTP = async (req, res) => {
         const otp = String(Math.floor(100000 + Math.random() * 900000));
         user.verfiyOtp = otp;
         user.verifyOtpExpiresAt = Date.now() + 1 * 60 * 1000;
-        console.log("otp expires at", user.verifyOtpExpiresAt)
+        console.log("otp expires at", user.verifyOtpExpiresAt);
 
         await user.save();
 
@@ -220,6 +220,13 @@ export const resendOtp = async (req, res) => {
             return res.status(401).json({ success: false, message: "User not found" })
         }
 
+        if (user.resetOtp && user.resetOtpExpiresAt > Date.now()) {
+            return res.status(400).json({
+                success: false,
+                message: "OTP already sent. Please wait before requesting a new one."
+            });
+        }
+
         const otp = String(Math.floor(1000000 + Math.random() * 900000));
         user.resetOtp = otp;
         user.resetOtpExpiresAt = Date.now() + 1 * 60 * 10000;
@@ -229,7 +236,7 @@ export const resendOtp = async (req, res) => {
         const mailOptions = {
             from: `"App Name" <${process.env.SENDER_EMAIL}>`,
             to: user.email, // <-- you had a bug: email is not defined
-            subject: "OTP Resent",
+            subject: "OTP Reset",
             html: `
                 <h2>Resent OTP</h2>
                 <p>Hi ${user.name},</p>
@@ -242,7 +249,7 @@ export const resendOtp = async (req, res) => {
 
         await transporter.sendMail(mailOptions);
 
-        return res.status(201).json({ success: true, message: "OTP Sent to your email" })
+        return res.status(201).json({ success: true, message: "OTP Resent to your email" })
 
 
     } catch (error) {
@@ -284,7 +291,7 @@ export const resetPassword = async (req, res) => {
         const mailOptions = {
             from: `"App Name" <${process.env.SENDER_EMAIL}>`,
             to: user.email, // <-- you had a bug: email is not defined
-            subject: "Password Changed",
+            subject: "Password Reset OTP",
             html: `
                 <h2>Password Changed</h2>
                 <p>Hi ${user.name},</p>
@@ -298,7 +305,7 @@ export const resetPassword = async (req, res) => {
 
         await transporter.sendMail(mailOptions);
 
-        return res.status(201).json({ success: true, message: "OTP Sent to your email" })
+        return res.status(201).json({ success: true, message: "Password Reset Successfully" })
 
     } catch (error) {
         return res.status(401).json({ success: false, message: error.message })
