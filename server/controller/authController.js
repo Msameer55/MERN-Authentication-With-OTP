@@ -28,6 +28,26 @@ export const register = async (req, res) => {
             password: hashedPassword,
         })
         const token = createToken(newUser);
+
+        if (newUser.isAccountVerified) {
+            return res.status(401).json({ success: false, message: "Account already verified" })
+        }
+
+        if (newUser.verifyOtp && newUser.verifyOtpExpiresAt > Date.now()) {
+            return res.status(400).json({
+                success: false,
+                message: "OTP already sent. Please wait before requesting a new one."
+            });
+        }
+
+
+        const otp = String(Math.floor(100000 + Math.random() * 900000));
+        newUser.verifyOtp = otp;
+        newUser.verifyOtpExpiresAt = Date.now() + 5 * 60 * 1000;
+        console.log("otp expires at", newUser.verifyOtpExpiresAt);
+
+        await newUser.save();
+
         const { _id } = newUser
 
         const mailOptions = {
@@ -132,7 +152,7 @@ export const sendVerifyOTP = async (req, res) => {
             return res.status(401).json({ success: false, message: "Account already verified" })
         }
 
-        if (user.verfiyOtp && user.verifyOtpExpiresAt > Date.now()) {
+        if (user.verifyOtp && user.verifyOtpExpiresAt > Date.now()) {
             return res.status(400).json({
                 success: false,
                 message: "OTP already sent. Please wait before requesting a new one."
@@ -140,7 +160,7 @@ export const sendVerifyOTP = async (req, res) => {
         }
 
         const otp = String(Math.floor(100000 + Math.random() * 900000));
-        user.verfiyOtp = otp;
+        user.verifyOtp = otp;
         user.verifyOtpExpiresAt = Date.now() + 1 * 60 * 1000;
         console.log("otp expires at", user.verifyOtpExpiresAt);
 
@@ -185,7 +205,7 @@ export const verifyEmail = async (req, res) => {
             return res.status(401).json({ success: false, message: "User not found" })
         }
 
-        if (user.verfiyOtp === "" || user.verfiyOtp !== otp) {
+        if (user.verifyOtp === "" || user.verifyOtp !== otp) {
             return res.status(401).json({ success: false, message: "Invalid OTP" })
         }
 
@@ -194,7 +214,7 @@ export const verifyEmail = async (req, res) => {
         }
 
         user.isAccountVerified = true;
-        user.verfiyOtp = "";
+        user.verifyOtp = "";
         user.verifyOtpExpiresAt = 0;
 
         await user.save();
