@@ -1,7 +1,7 @@
 import axiosInstance from "../config/axios";
 
 const AuthApi = {
-    sendOtp : (email) => axiosInstance.post("/api/auth/v1/send-verify-otp", email);
+    registerApi : ({name, email, password}) => axiosInstance.post("/api/auth/v1/register", {name, email, password})
 }
 
 

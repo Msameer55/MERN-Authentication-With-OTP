@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    verfiyOtp: {
+    verifyOtp: {
         type: String, 
         default: ""
     },
