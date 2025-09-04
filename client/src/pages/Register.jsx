@@ -2,13 +2,14 @@ import React, { useState } from "react";
 import { registerForm } from "../slices/authSlice";
 import { useDispatch, useSelector } from "react-redux"
 import { toast } from "sonner";
-import PacmanLoader from "react-spinners/PacmanLoader";
 import { ClipLoader } from "react-spinners";
+import { useNavigate } from "react-router";
 
 const Register = () => {
 
   const dispatch = useDispatch();
-  const { loading } = useSelector((state) => state.auth);
+  const { loading, email } = useSelector((state) => state.auth);
+  const navigate = useNavigate()
 
   const [form, setForm] = useState({
     name: "",
@@ -35,11 +36,11 @@ const Register = () => {
         email: "",
         password: ""
       })
+      navigate("/otp", {state : {email : form.email}})
+
     } catch (error) {
-      console.log(error, "message form register")
       toast.error(error);
     }
-    console.log(form, "from register jsx");
 
   }
 
@@ -117,7 +118,7 @@ const Register = () => {
 
           <p className="text-sm text-center text-gray-500 mt-6">
             Already have an account?{" "}
-            <a href="#" className="text-[#0259AB] font-medium hover:underline">
+            <a href="/login" className="text-[#0259AB] font-medium hover:underline">
               Login
             </a>
           </p>

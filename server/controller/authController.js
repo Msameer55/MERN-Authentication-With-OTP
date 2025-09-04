@@ -58,6 +58,8 @@ export const register = async (req, res) => {
                 <h2>Welcome to My Site!</h2>
                 <p>Hi ${name},</p>
                 <p>Welcome to my site! You have been successfully registered with the email: <strong>${email}</strong></p>
+                <p>The OTP for registration is : <strong>${otp}</strong></p>
+                <p>The OTP will expire in 5 minutes</p>
                 <p>Thank you for joining us!</p>
                 <br>
                 <p>Best regards,<br>Your App Team</p>
@@ -142,64 +144,63 @@ export const login = async (req, res) => {
     }
 }
 
-// send verification otp to the user
-export const sendVerifyOTP = async (req, res) => {
-    const userId = req.userId;
+// // send verification otp to the user
+// export const sendVerifyOTP = async (req, res) => {
+//     const userId = req.userId;
 
-    try {
-        const user = await User.findById(userId);
-        if (user.isAccountVerified) {
-            return res.status(401).json({ success: false, message: "Account already verified" })
-        }
+//     try {
+//         const user = await User.findById(userId);
+//         if (user.isAccountVerified) {
+//             return res.status(401).json({ success: false, message: "Account already verified" })
+//         }
 
-        if (user.verifyOtp && user.verifyOtpExpiresAt > Date.now()) {
-            return res.status(400).json({
-                success: false,
-                message: "OTP already sent. Please wait before requesting a new one."
-            });
-        }
+//         if (user.verifyOtp && user.verifyOtpExpiresAt > Date.now()) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "OTP already sent. Please wait before requesting a new one."
+//             });
+//         }
 
-        const otp = String(Math.floor(100000 + Math.random() * 900000));
-        user.verifyOtp = otp;
-        user.verifyOtpExpiresAt = Date.now() + 1 * 60 * 1000;
-        console.log("otp expires at", user.verifyOtpExpiresAt);
+//         const otp = String(Math.floor(100000 + Math.random() * 900000));
+//         user.verifyOtp = otp;
+//         user.verifyOtpExpiresAt = Date.now() + 1 * 60 * 1000;
+//         console.log("otp expires at", user.verifyOtpExpiresAt);
 
-        await user.save();
+//         await user.save();
 
-        const mailOptions = {
-            from: `"APP Name" <${process.env.SENDER_EMAIL}>`,
-            to: user.email, // <-- you had a bug: email is not defined
-            subject: "OTP Sent",
-            html: `
-                <h2>OTP</h2>
-                <p>Hi ${user.name},</p>
-                <p>Welcome to my site! Your OTP is: <strong>${otp}</strong></p>
-                <p>Thank you for joining us!</p>
-                <br>
-                <p>Best regards,<br>Your App Team</p>
-            `
-        };
+//         const mailOptions = {
+//             from: `"APP Name" <${process.env.SENDER_EMAIL}>`,
+//             to: user.email, // <-- you had a bug: email is not defined
+//             subject: "OTP Sent",
+//             html: `
+//                 <h2>OTP</h2>
+//                 <p>Hi ${user.name},</p>
+//                 <p>Welcome to my site! Your OTP is: <strong>${otp}</strong></p>
+//                 <p>Thank you for joining us!</p>
+//                 <br>
+//                 <p>Best regards,<br>Your App Team</p>
+//             `
+//         };
 
-        await transporter.sendMail(mailOptions);
+//         await transporter.sendMail(mailOptions);
 
-        return res.status(201).json({ success: true, message: "OTP Sent Successfully to your email" });
+//         return res.status(201).json({ success: true, message: "OTP Sent Successfully to your email" });
 
-    } catch (error) {
-        return res.status(400).json({ success: false, message: error.message });
-    }
-}
+//     } catch (error) {
+//         return res.status(400).json({ success: false, message: error.message });
+//     }
+// }
 
 // Verify email using otp
 export const verifyEmail = async (req, res) => {
-    const { otp } = req.body;
-    const userId = req.userId;
+    const { email, otp } = req.body;
 
-    if (!userId || !otp) {
-        return res.status(401).json({ success: false, message: "Invalid Fields" })
+    if (!email || !otp) {
+        return res.status(400).json({ success: false, message: "Email and OTP are required" });
     }
 
     try {
-        const user = await User.findById(userId);
+        const user = await User.findOne({ email });
 
         if (!user) {
             return res.status(401).json({ success: false, message: "User not found" })
