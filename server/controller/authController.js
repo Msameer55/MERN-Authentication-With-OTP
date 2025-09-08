@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import transporter from "../config/nodemailer.js";
 
 const createToken = (user) => {
-    return jwt.sign({ userId: user._id, }, process.env.SECRET, { expiresIn: "1h" })
+    return jwt.sign({ id: user._id, email: user.email, }, process.env.SECRET, { expiresIn: "1h" })
 }
 
 export const register = async (req, res) => {
@@ -47,9 +47,7 @@ export const register = async (req, res) => {
         console.log("otp expires at", newUser.verifyOtpExpiresAt);
 
         await newUser.save();
-
-        const { _id } = newUser
-
+        
         const mailOptions = {
             from: `"Your App Name" <${process.env.SENDER_EMAIL}>`, // Use verified sender email
             to: email,
@@ -95,7 +93,7 @@ export const register = async (req, res) => {
             message: "User Registered Successfully",
             token,
             user: {
-                id: _id,
+                id: newUser._id,
                 name: newUser.name,
                 email: newUser.email
             }
@@ -128,14 +126,15 @@ export const login = async (req, res) => {
         }
 
         const token = createToken(user);
-
+         user.isAccountVerified = true;
         return res.status(201).json({
             success: true,
             message: "Login Successfully",
             token,
             user: {
                 id: user._id,
-                email: user.email
+                email: user.email,
+                isVerified : true
             }
         })
 

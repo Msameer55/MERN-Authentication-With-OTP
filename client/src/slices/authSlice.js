@@ -31,10 +31,10 @@ export const loginForm = createAsyncThunk("auth/login", async (form, { rejectWit
         return response.data;
     } catch (error) {
         console.log(error)
-        console.log(error?.response)
-        console.log(error?.response?.data)
-        console.log(error?.response?.data?.message)
-        return rejectWithValue(error?.response?.data?.message || "Failed to Login")
+        // console.log(error?.response)  undefined
+        // console.log(error?.response?.data)    undefined
+        // console.log(error?.response?.data?.message)   undefined
+        return rejectWithValue(error?.response?.data?.message || error || "Failed to Login")
     }
 })
 

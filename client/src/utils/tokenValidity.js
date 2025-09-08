@@ -27,7 +27,7 @@ export const isTokenValid = (token) => {
         }
 
         // Basic token structure validation
-        if (!decoded.id || !decoded.role || !decoded.email) {
+        if (!decoded.id ||  !decoded.email) {
             console.error('SECURITY WARNING: Token missing required fields');
             localStorage.removeItem('token');
             return {
@@ -51,10 +51,8 @@ export const isTokenValid = (token) => {
         return {
             valid: false,
             user: null,
-            role: null,
             otpVerified: false,
             email: null,
-            accessibleMenuPaths: [],
         };
     }
 }
