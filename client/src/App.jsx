@@ -27,7 +27,7 @@ const App = () => {
         <Route
           path="/otp"
           element={
-            <ProtectedRoute isAuthRequired={true}>
+            <ProtectedRoute isOtpPage={true}>
               <OtpPage />
             </ProtectedRoute>
           }

@@ -26,20 +26,13 @@ const Login = () => {
         setLoading(true);
         try {
             const data = await dispatch(loginForm(form)).unwrap();
-            localStorage.setItem("token", data.token);
-            if (data.user.isVerified) {
-                navigate("/dashboard");
-            } else {
+            toast.success(data.message);
+            navigate("/dashboard"); // only verified users reach dashboard
+        } catch (error) {
+            if (error === "Account not verified. Please verify OTP first.") {
                 navigate("/otp", { state: { email: form.email } });
             }
-            console.log(data.message, "in login");
-            toast.success(data.message);
-            setForm({
-                email: "",
-                password: ""
-            })
-        } catch (error) {
-            toast.error(error?.message || error);
+            toast.error(error);
         } finally {
             setLoading(false);
         }

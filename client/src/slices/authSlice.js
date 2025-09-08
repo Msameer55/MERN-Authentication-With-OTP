@@ -14,9 +14,9 @@ export const registerForm = createAsyncThunk("auth/register", async (form, { rej
 })
 
 
-export const OTPVerify = createAsyncThunk("auth/OTPVerify", async (data, { rejectWithValue }) => {
+export const OTPVerify = createAsyncThunk("auth/OTPVerify", async ({ email, otp }, { rejectWithValue }) => {
     try {
-        const response = await AuthApi.sendOTPApi(data);
+        const response = await AuthApi.sendOTPApi({ email, otp });
         console.log(response.data, "response from otp");
         return response.data
     } catch (error) {
@@ -24,9 +24,9 @@ export const OTPVerify = createAsyncThunk("auth/OTPVerify", async (data, { rejec
     }
 })
 
-export const loginForm = createAsyncThunk("auth/login", async (form, { rejectWithValue }) => {
+export const loginForm = createAsyncThunk("auth/login", async ({ email, password }, { rejectWithValue }) => {
     try {
-        const response = await AuthApi.loginApi(form);
+        const response = await AuthApi.loginApi({ email, password });
         console.log(response.data, "from login");
         return response.data;
     } catch (error) {
@@ -38,61 +38,82 @@ export const loginForm = createAsyncThunk("auth/login", async (form, { rejectWit
     }
 })
 
+export const resendOTP = createAsyncThunk("auth/resendOtp", async ({ email }, { rejectWithValue }) => {
+    try {
+        const response = await AuthApi.resendOTPApi({ email });
+        console.log(response.data, "from resend otp slice");
+        return response.data;
+    } catch (error) {
+        return rejectWithValue(error?.response?.message || error?.message || "Failed to resend OTP")
+    }
+})
+
 const token = localStorage.getItem("token");
 const tokenData = isTokenValid(token);
 
 const initialState = {
     loading: false,
     error: null,
-    user: tokenData.user,
-    email: tokenData.email,
-    isValid: tokenData.valid || false,
-    otpVerified: tokenData.otpVerified
+    registeredEmail: null, // email of user who just registered
+    otpVerified: false, // set to true after OTP verification
+    user: null,
+    token: null,
 }
 
 const authSlice = createSlice({
     name: "auth",
     initialState,
+    reducers: {
+        logout: (state) => {
+            state.user = null;
+            state.token = null;
+            state.registeredEmail = null;
+            state.otpVerified = false;
+            localStorage.removeItem("token");
+        },
+    },
     extraReducers: (builder) => {
         builder
-            .addCase(registerForm.pending, (state) => {
-                state.loading = true
-            })
+            // REGISTER
+            .addCase(registerForm.pending, (state) => { state.loading = true; state.error = null; })
             .addCase(registerForm.fulfilled, (state, action) => {
-                state.loading = false,
-                    state.user = action.payload.user
-                state.email = action.payload.user.email;
-                localStorage.setItem("token", action.payload.token);
+                state.loading = false;
+                state.registeredEmail = action.payload.email;
+                state.otpVerified = false;
             })
             .addCase(registerForm.rejected, (state, action) => {
-                state.loading = false,
-                    state.error = action.payload;
+                state.loading = false;
+                state.error = action.payload;
             })
-            // otp 
-            .addCase(OTPVerify.pending, (state) => {
-                state.loading = true
-            })
-            .addCase(OTPVerify.fulfilled, (state, action) => {
-                state.loading = false,
-                    state.otpVerified = true
+            // OTP VERIFY
+            .addCase(OTPVerify.pending, (state) => { state.loading = true; state.error = null; })
+            .addCase(OTPVerify.fulfilled, (state) => {
+                state.loading = false;
+                state.otpVerified = true;
+                state.registeredEmail = null;
             })
             .addCase(OTPVerify.rejected, (state, action) => {
-                state.error = action.payload
+                state.loading = false;
+                state.error = action.payload;
             })
-            .addCase(loginForm.pending, (state) => {
-                state.loading = true
-            })
+            // LOGIN
+            .addCase(loginForm.pending, (state) => { state.loading = true; state.error = null; })
             .addCase(loginForm.fulfilled, (state, action) => {
-                state.loading = false,
-                    state.user = action.payload.user,
-                    state.isValid = true,
-                    localStorage.setItem("token", action.payload.token)
+                state.loading = false;
+                state.user = action.payload.user;
+                state.token = action.payload.token;
+                localStorage.setItem("token", action.payload.token);
             })
             .addCase(loginForm.rejected, (state, action) => {
-                state.error = action.payload
+                state.loading = false;
+                state.error = action.payload;
             })
-    }
-})
+            // RESEND OTP
+            .addCase(resendOTP.pending, (state) => { state.loading = true; state.error = null; })
+            .addCase(resendOTP.fulfilled, (state) => { state.loading = false; })
+            .addCase(resendOTP.rejected, (state, action) => { state.loading = false; state.error = action.payload; });
+    },
+});
 
-
+export const { logout } = authSlice.actions;
 export default authSlice.reducer;

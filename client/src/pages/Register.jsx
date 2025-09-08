@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { registerForm } from "../slices/authSlice";
 import { useDispatch, useSelector } from "react-redux"
 import { toast } from "sonner";
@@ -8,7 +8,7 @@ import { useNavigate } from "react-router";
 const Register = () => {
 
   const dispatch = useDispatch();
-  const { loading, email } = useSelector((state) => state.auth);
+  const { loading, registeredEmail } = useSelector(state => state.auth);
   const navigate = useNavigate()
 
   const [form, setForm] = useState({
@@ -21,28 +21,31 @@ const Register = () => {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
+  const safeError = (err) => {
+    if (!err) return "Something went wrong";
+    if (typeof err === "string") return err;
+    if (err.message) return err.message;
+    if (err.data?.message) return err.data.message;
+    return "Something went wrong";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
       if (!form.name || !form.email || !form.password) {
         toast.error("Please fill all the fields");
         return;
       }
+
       const data = await dispatch(registerForm(form)).unwrap();
-      toast.success(data.message)
-      setForm({
-        name: "",
-        email: "",
-        password: ""
-      })
-      navigate("/otp", {state : {email : form.email}})
+      localStorage.setItem("pendingOtpEmail", form.email);
+      toast.success(data.message);
 
+      navigate("/otp", { state: { email: form.email } });
     } catch (error) {
-      toast.error(error);
+      toast.error(safeError(error));
     }
-
-  }
+  };
 
   return (
 
