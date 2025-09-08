@@ -9,8 +9,10 @@ const OtpPage = () => {
     const [loading, setLoading] = useState(false);
     const dispatch = useDispatch();
     const location = useLocation();
-    const email = location.state?.email;  // ✅ this is your email
+    const email = location.state?.email;  
     const navigate = useNavigate();
+
+    
     const handleOTPCheck = async (e) => {
         e.preventDefault();
         setLoading(true);

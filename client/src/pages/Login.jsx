@@ -15,6 +15,8 @@ const Login = () => {
     })
     const [loading, setLoading] = useState(false);
 
+    const navigate = useNavigate();
+
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value })
     }
@@ -24,6 +26,12 @@ const Login = () => {
         setLoading(true);
         try {
             const data = await dispatch(loginForm(form)).unwrap();
+            localStorage.setItem("token", data.token);
+            if (data.user.isVerified) {
+                navigate("/dashboard");
+            } else {
+                navigate("/otp", { state: { email: form.email } });
+            }
             console.log(data.message, "in login");
             toast.success(data.message);
             setForm({
@@ -31,8 +39,8 @@ const Login = () => {
                 password: ""
             })
         } catch (error) {
-            toast.error(error);
-        }finally{
+            toast.error(error?.message || error);
+        } finally {
             setLoading(false);
         }
     }
@@ -42,7 +50,7 @@ const Login = () => {
         <div className="login-container min-h-screen flex justify-center items-center bg-gradient-to-r from-[#0095D8]  to-[#0259AB] p-6">
             {
                 loading && (
-                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50">
+                    <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0, 0, 0, 0.8)] opacity-80 z-50">
                         <ClipLoader color="#ffffff" size={25} />
                     </div>
                 )
