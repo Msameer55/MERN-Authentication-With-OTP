@@ -1,27 +1,31 @@
-import { Navigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { Navigate, useLocation } from "react-router-dom";
+import { isTokenValid } from "../utils/tokenValidity";
 
-const ProtectedRoute = ({ children, isAuthRequired, isAuthPage }) => {
-  const { isValid, otpVerified } = useSelector((state) => state.auth);
-  const location = useLocation();
+const ProtectedRoute = ({ isAuthRequired, isAuthPage, isOtpPage, children }) => {
+    const { token } = useSelector(state => state.auth);
+    const location = useLocation();
+    const tokenData = isTokenValid(token);
 
-  // Case 1: Protected pages (dashboard, otp, etc.)
-  if (isAuthRequired && !isValid) {
-    return <Navigate to="/404" replace />;
-  }
+    // Dashboard requires login and verified account
+    if (isAuthRequired && (!token || !tokenData.valid || !tokenData.isVerified)) {
+        return <Navigate to="/login" replace />;
+    }
 
-  // Case 2: Auth pages (login/register) → block if already logged in
-  if (isAuthPage && isValid) {
-    return <Navigate to="/dashboard" replace />;
-  }
+    // Login/Register pages: redirect if already logged in & verified
+    if (isAuthPage && tokenData.valid && tokenData.isVerified) {
+        return <Navigate to="/dashboard" replace />;
+    }
+    
+    // OTP page: allow if email exists in state or localStorage
+    if (isOtpPage) {
+        const email = location.state?.email || localStorage.getItem("pendingOtpEmail");
+        if (!email) {
+            return <Navigate to="/login" replace />;
+        }
+    }
 
-  // Case 3: OTP page → only allow if logged in but not verified
-  if (location.pathname === "/otp") {
-    if (!isValid) return <Navigate to="/404" replace />;
-    if (otpVerified) return <Navigate to="/dashboard" replace />;
-  }
-
-  return children;
+    return children;
 };
 
 export default ProtectedRoute;
