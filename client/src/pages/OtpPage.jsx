@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { OTPVerify, resendOTP } from "../slices/authSlice";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 
 const OtpPage = () => {
+    const {otpVerified} = useSelector((state) => state.auth);
+    console.log(otpVerified,' from otp page ')
     const [otp, setOtp] = useState("");
     const [loading, setLoading] = useState(false);
     const [resendLoading, setResendLoading] = useState(false);
@@ -26,11 +28,23 @@ const OtpPage = () => {
         }
     }, [email, navigate]);
 
+
+    useEffect(() => {
+        if (otpVerified) {
+            navigate("/login", { replace: true });
+        }
+    }, [otpVerified, navigate]);
+
     const safeError = (err) => {
-        if (!err) return "Something went wrong";
+        // If it's a string from rejectWithValue
         if (typeof err === "string") return err;
-        if (err.message) return err.message;
-        if (err.data?.message) return err.data.message;
+
+        // If it's an Axios error with response message
+        if (err?.response?.data?.message) return err.response.data.message;
+
+        // If it's a normal Error object
+        if (err?.message) return err.message;
+
         return "Something went wrong";
     };
 
@@ -40,7 +54,7 @@ const OtpPage = () => {
         try {
             const data = await dispatch(OTPVerify({ email, otp })).unwrap();
             toast.success(data.message);
-            localStorage.removeItem("pendingOtpEmail"); // clear saved email
+            localStorage.removeItem("pendingOtpEmail");
             navigate("/login");
         } catch (err) {
             toast.error(safeError(err));
@@ -51,23 +65,14 @@ const OtpPage = () => {
 
     const handleResendOtp = async () => {
         if (cooldown > 0) return;
+
         setResendLoading(true);
         try {
             const data = await dispatch(resendOTP({ email })).unwrap();
-            toast.success(data.message || "OTP sent successfully");
-
+            toast.success(data.message);
             setCooldown(30);
-            const interval = setInterval(() => {
-                setCooldown((prev) => {
-                    if (prev <= 1) {
-                        clearInterval(interval);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
         } catch (err) {
-            toast.error(safeError(err));
+            toast.error(err?.message || err?.response?.data?.message || err?.response?.message || "Something went wrong");
         } finally {
             setResendLoading(false);
         }
@@ -92,11 +97,10 @@ const OtpPage = () => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className={`${
-                                    loading
-                                        ? " bg-gray-400 text-white cursor-not-allowed"
-                                        : "bg-[#0259AB] text-white hover:bg-[#0978e0] cursor-pointer"
-                                } mt-4 w-full py-3 font-semibold rounded-xl transition-colors duration-300`}
+                                className={`${loading
+                                    ? " bg-gray-400 text-white cursor-not-allowed"
+                                    : "bg-[#0259AB] text-white hover:bg-[#0978e0] cursor-pointer"
+                                    } mt-4 w-full py-3 font-semibold rounded-xl transition-colors duration-300`}
                             >
                                 {loading ? "Verifying..." : "Submit"}
                             </button>
@@ -109,13 +113,13 @@ const OtpPage = () => {
                             <button
                                 onClick={handleResendOtp}
                                 disabled={resendLoading || cooldown > 0}
-                                className="text-blue-600 underline disabled:text-gray-400"
+                                className="cursor-pointer text-blue-600 underline disabled:text-gray-400"
                             >
                                 {cooldown > 0
                                     ? `Resend OTP in ${cooldown}s`
                                     : resendLoading
-                                    ? "Resending..."
-                                    : "Resend OTP"}
+                                        ? "Resending..."
+                                        : "Resend OTP"}
                             </button>
                         </p>
                     </div>

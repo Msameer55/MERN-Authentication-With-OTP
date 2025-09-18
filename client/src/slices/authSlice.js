@@ -78,8 +78,9 @@ const authSlice = createSlice({
             .addCase(registerForm.pending, (state) => { state.loading = true; state.error = null; })
             .addCase(registerForm.fulfilled, (state, action) => {
                 state.loading = false;
-                state.registeredEmail = action.payload.email;
+                state.registeredEmail = action.payload?.user?.email || action.meta.arg.email;
                 state.otpVerified = false;
+                console.log(action.payload.user.email, "from auth slice ")
             })
             .addCase(registerForm.rejected, (state, action) => {
                 state.loading = false;
