@@ -3,12 +3,14 @@ import { loginForm, registerForm } from "../slices/authSlice";
 import { useDispatch, useSelector } from "react-redux"
 import { toast } from "sonner";
 import { ClipLoader } from "react-spinners";
-import { useNavigate } from "react-router";
+import { NavLink, useNavigate } from "react-router";
+import { FaRegEye, FaRegEyeSlash } from "react-icons/fa6";
 
 const Login = () => {
 
     const { user } = useSelector((state) => state.auth);
     const dispatch = useDispatch();
+    const [showPass, setShowPass] = useState(false);
     const [form, setForm] = useState({
         email: "",
         password: ""
@@ -36,6 +38,11 @@ const Login = () => {
         } finally {
             setLoading(false);
         }
+    }
+
+    const handleShowPass = () => {
+        setShowPass(!showPass)
+        console.log(showPass, "show")
     }
 
     return (
@@ -76,14 +83,27 @@ const Login = () => {
                             <label className="block text-sm font-medium text-gray-600 mb-1">
                                 Password
                             </label>
-                            <input
-                                type="password"
-                                placeholder="Enter your password"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0259AB] focus:outline-none"
-                                name="password"
-                                value={form.password}
-                                onChange={handleChange}
-                            />
+                            <div className="relative">
+                                <input
+                                    type={`${showPass ? "text" : "password"}`}
+                                    placeholder="Enter your password"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0259AB] focus:outline-none"
+                                    name="password"
+                                    value={form.password}
+                                    onChange={handleChange}
+                                />
+                                <span onClick={handleShowPass} className="absolute right-0 top-0 bottom-0 flex items-center mr-2 cursor-pointer">
+                                    {
+                                        showPass ? (
+                                            <FaRegEyeSlash />
+                                        ) : (
+                                            <FaRegEye />
+                                        )
+                                    }
+
+                                </span>
+                            </div>
+
                         </div>
 
                         {/* Button */}
@@ -98,9 +118,9 @@ const Login = () => {
 
                     <p className="text-sm text-center text-gray-500 mt-6">
                         Dont have an account?{" "}
-                        <a href="/register" className="text-[#0259AB] font-medium hover:underline">
+                        <NavLink to="/register" className="text-[#0259AB] font-medium hover:underline">
                             Register
-                        </a>
+                        </NavLink>
                     </p>
                 </div>
             </div>

@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import transporter from "../config/nodemailer.js";
 
 const createToken = (user) => {
-    return jwt.sign( { id: user._id, email: user.email, isVerified: user.isAccountVerified }, process.env.SECRET, { expiresIn: "1h" })
+    return jwt.sign({ id: user._id, email: user.email, isVerified: user.isAccountVerified }, process.env.SECRET, { expiresIn: "1h" })
 }
 
 export const register = async (req, res) => {
@@ -16,9 +16,66 @@ export const register = async (req, res) => {
     }
     try {
         console.log(email, "access")
-        const existEmail = await User.findOne({ email });
-        if (existEmail) {
-            return res.status(400).json({ success: false, message: "Email already registered" })
+        const existUser = await User.findOne({ email });
+        if (existUser) {
+            if (existUser.isAccountVerified) {
+                // Already verified -> block registration
+                return res.status(400).json({ success: false, message: "Email already registered" });
+            } else {
+                // Exists but not verified -> update OTP and resend
+                const otp = String(Math.floor(100000 + Math.random() * 900000));
+                existUser.verifyOtp = otp;
+                existUser.verifyOtpExpiresAt = Date.now() + 5 * 60 * 1000;
+                await existUser.save();
+
+                // send mail with otp again
+                const mailOptions = {
+                    from: `"Your App Name" <${process.env.SENDER_EMAIL}>`, // Use verified sender email
+                    to: email,
+                    subject: "Verify Your Account",
+                    html: `
+                <h2>Welcome to My Site!</h2>
+                <p>Hi ${name},</p>
+                <p>Welcome to my site! You have been successfully registered with the email: <strong>${email}</strong></p>
+                <p>The OTP for registration is : <strong>${otp}</strong></p>
+                <p>The OTP will expire in 5 minutes</p>
+                <p>Thank you for joining us!</p>
+                <br>
+                <p>Best regards,<br>Your App Team</p>
+            `,
+                    text: `Welcome to my site, ${name}! You have been registered with the email ${email}`
+                };
+
+                console.log("Sender email:", process.env.SENDER_EMAIL);
+                console.log("SMTP user:", process.env.SMTP_USER);
+                console.log("SMTP pass exists:", !!process.env.SMTP_PASS);
+                console.log("Attempting to send email to:", email);
+
+                // Send email with proper error handling
+                try {
+                    console.log("About to send email...");
+                    const emailResult = await transporter.sendMail(mailOptions);
+                    console.log("Email sent successfully:", emailResult.messageId);
+                    console.log("Email response:", emailResult.response);
+                } catch (emailError) {
+                    console.error("=== EMAIL SENDING FAILED ===");
+                    console.error("Error message:", emailError.message);
+                    console.error("Error code:", emailError.code);
+                    console.error("Error response:", emailError.response);
+                    console.error("Error responseCode:", emailError.responseCode);
+                    console.error("Full error:", emailError);
+
+                    // Don't fail registration if email fails - just log the error
+                    console.log("Registration will continue despite email failure");
+                }
+
+                return res.status(200).json({
+                    success: true,
+                    message: "OTP re-sent to your email. Please verify your account.",
+                    user: { email: existUser.email, isAccountVerified: existUser.isAccountVerified }
+
+                });
+            }
         }
 
         const hashedPassword = await bcryptjs.hash(password, 10);
@@ -97,7 +154,8 @@ export const register = async (req, res) => {
             user: {
                 id: newUser._id,
                 name: newUser.name,
-                email: newUser.email
+                email: newUser.email,
+                isAccountVerified : newUser.isAccountVerified
             }
         })
 
@@ -123,7 +181,7 @@ export const login = async (req, res) => {
 
         // Token now includes isVerified
         const token = createToken(user)
-        
+
 
         return res.status(200).json({ success: true, message: "Login successful", token, user: { id: user._id, email: user.email } });
 
@@ -149,6 +207,10 @@ export const verifyEmail = async (req, res) => {
 
         if (!user) {
             return res.status(401).json({ success: false, message: "User not found" })
+        }
+
+        if (user.isAccountVerified) {
+            return res.status(409).json({ success: false, message: "Account Already Verified Please Login" })
         }
 
         if (user.verifyOtp === "" || user.verifyOtp !== otp) {
